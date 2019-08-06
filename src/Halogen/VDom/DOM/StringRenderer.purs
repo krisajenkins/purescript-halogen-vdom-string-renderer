@@ -3,12 +3,12 @@ module Halogen.VDom.DOM.StringRenderer (render) where
 import Prelude
 import Halogen.VDom (VDom, ElemName(..))
 import Halogen.VDom.DOM.Prop (Prop(..), PropValue)
+import Foreign (typeOf, unsafeToForeign)
 import Data.Array as A
-import Data.Foreign (toForeign, typeOf)
 import Data.Maybe (Maybe(..))
 import Data.String as S
-import Data.StrMap as SM
-import Data.Tuple (Tuple(..))
+import Data.Set (Set)
+import Data.Set as Set
 import Halogen.VDom.StringRenderer as VSR
 import Halogen.VDom.StringRenderer.Util (escape)
 import Unsafe.Coerce (unsafeCoerce)
@@ -18,7 +18,7 @@ render renderWidget = VSR.render getTagType renderProps renderWidget
 
 getTagType ∷ ElemName → VSR.TagType
 getTagType (ElemName en)
-  | SM.member en voidElements = VSR.SelfClosingTag
+  | Set.member en voidElements = VSR.SelfClosingTag
   | otherwise = VSR.NormalTag
 
 renderProps ∷ ∀ i. Array (Prop i) → String
@@ -41,7 +41,7 @@ propNameToAttrName = case _ of
   p → p
 
 renderProperty ∷ String → PropValue → Maybe String
-renderProperty name prop = case typeOf (toForeign prop) of
+renderProperty name prop = case typeOf (unsafeToForeign prop) of
   "string"  → renderAttr name' $ (unsafeCoerce ∷ PropValue → String) prop
   "number"  → renderAttr name' $ show ((unsafeCoerce ∷ PropValue → String) prop)
   "boolean" → Just $ escape name'
@@ -49,11 +49,9 @@ renderProperty name prop = case typeOf (toForeign prop) of
   where
   name' = propNameToAttrName name
 
-voidElements :: SM.StrMap Unit
+voidElements :: Set String
 voidElements =
-  SM.fromFoldable
-    $ map (flip Tuple unit)
-    $ names
+  Set.fromFoldable names
   where
   names =
     [ "area"
